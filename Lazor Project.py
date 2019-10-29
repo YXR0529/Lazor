@@ -120,7 +120,28 @@ class Lazor():
                         info_dict["fixed_block_position"][(2 * x + 1, 2 * y + 1)] = [raw_info[y][x]]
         return info_dict
 
+    def reflect_block_location(self, position_x, position_y, direction_x, direction_y):
+        '''
+        Written by Don.
+
+        This function is seperated from lazor_path(), in order to avoid too
+        many if-else judgements.
+
+        After discussion, we notice that at upper/lower bound of a block,
+        x changes direction while at left/right bound, y changes direction.
+        '''
+        if position_y % 2 == 1:
+            return {(position_x + direction_x, position_y): [direction_x * -1, direction_y]}
+        elif position_x % 2 == 1:
+            return {(position_x, position_y + direction_y): [direction_x, direction_y * -1]}
+
     def lazor_path(self, info_dict):
+        '''
+        Written by Don.
+
+        Full comment will be updated after I add the last part of generating possible
+        location of next block.
+        '''
         info_dict['lazor_path'] = []
         info_dict['possible_block_position'] = []
         c_lazor = {}
@@ -129,44 +150,31 @@ class Lazor():
             y = i[1]
             direction_x = info_dict["lazor"][i][0]
             direction_y = info_dict["lazor"][i][1]
-            reflected_times = 0
             possible_position = []
             while 0 <= x <= info_dict['map_length'] and 0 <= y <= info_dict['map_height']:
-                if y % 2 == 1 and (x + direction_x, y) in info_dict["block_position"]:
-                    if reflected_times >= len(info_dict['block_position']):
-                        pass
-                    else:
+                passed_blocks = []
+                (key,value), = Lazor.reflect_block_location(self, x, y, direction_x, direction_y).items()
+                if key in info_dict["block_position"]:
+                    if (x + direction_x, y) not in passed_blocks:
+                        passed_blocks.append(key)
                         possible_position = []
-                        reflected_times += 1
-                    if info_dict["block_position"][(x + direction_x, y)] == "A":
-                        direction_x = direction_x * -1
-                    elif info_dict["block_position"][(x + direction_x, y)] == "B":
+                    if info_dict["block_position"][key] == "A":
+                        direction_x, direction_y = value
+                    elif info_dict["block_position"][key] == "B":
                         break
-                    elif info_dict["block_position"][(x + direction_x, y)] == "C":
+                    elif info_dict["block_position"][key] == "C":
                         if (x + direction_x, y + direction_y) not in info_dict["lazor"]:
                             c_lazor[(x + direction_x, y + direction_y)] = (direction_x, direction_y)
-                        direction_x = direction_x * -1
-                elif x % 2 == 1 and (x, y + direction_y) in info_dict["block_position"]:
-                    if reflected_times >= len(info_dict['block_position']):
-                        pass
-                    else:
-                        possible_position = []
-                        reflected_times += 1
-                    if info_dict["block_position"][(x, y + direction_y)] == "A":
-                        direction_y = direction_y * -1
-                    elif info_dict["block_position"][(x, y + direction_y)] == "B":
-                        break
-                    elif info_dict["block_position"][(x, y + direction_y)] == "C":
-                        if (x + direction_x, y + direction_y) not in info_dict["lazor"]:
-                            c_lazor[(x + direction_x, y + direction_y)] = (direction_x, direction_y)
-                        direction_y = direction_y * -1
+                        direction_x, direction_y = value
                 if (x, y) not in info_dict['lazor_path'] and (x, y) in info_dict["points"]:
                     info_dict['lazor_path'].append((x, y))
                 x += direction_x
                 y += direction_y
                 possible_position.append((x, y))
+            # Needs Update!
             for p in possible_position:
                 info_dict['possible_block_position'].append(i)
+
         if c_lazor == {}:
             return info_dict
         else:
@@ -176,6 +184,7 @@ class Lazor():
 
     def solve_lazor(self):
         '''
+        注意：有些地图中的目标点在地图之外！
         '''
         pass
 
@@ -196,23 +205,28 @@ class Lazor():
 
 
 if __name__ == "__main__":
+    # Diagonal 7
     info_dict = {
         'map': [
-            ["o", "o", 'o', 'o'],
+            ["x", "o", 'o', 'o'],
+            ['x', 'x', 'o', 'o'],
             ['o', 'o', 'o', 'o'],
             ['o', 'o', 'o', 'o'],
-            ['o', 'o', 'o', 'o']
+            ['o', 'o', 'o', 'x']
         ],
         'lazor': {
-            (8, 7): [-1, -1]
+            (8, 7): [-1, -1],
+            (7, 4): [1, -1]
         },
         'block_position': {
-        (5, 3): "A",
-        (1, 5): "A",
-        (3, 7): "C",
-        (5, 7): "B"}
+            (5, 3): "A",
+            (1, 5): "A",
+            (3, 7): "A",
+            (5, 9): "A",
+            (7, 5): "C"
+        }
     }
     a = Lazor()
-    a.load_lazor_map(info_dict)
-    b = a.lazor_path(a.load_lazor_map(info_dict))
+    b = a.load_lazor_map(info_dict)
+    c = a.lazor_path(b)
     print(b)
