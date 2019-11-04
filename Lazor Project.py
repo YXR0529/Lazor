@@ -42,25 +42,30 @@ class Lazor():
             if line.strip("\n") == "GRID STOP":
                 break
             # Generate a list of lists with information of the map(the line between "GRID START" and "GRID STOP" )
-            map.append(line.strip("\n").split(" "))
+            lst = []
+            for x in line.strip("\n"):
+                if x != " " :
+                    lst.append(x)
+            map.append(lst)
         # Add map to dictionary.
         file["map"] = map
-        block = []
-        lazer = {}
+        block = {}
+        lazor = {}
         point = []
         for line in f:
-            # Generate list/dictionary with information of blocks/lazers/target points.
+            # Generate list/dictionary with information of blocks/lazors/target points.
             if line.startswith('A') or line.startswith('B') or line.startswith('C'):
-                block.append(line.strip("\n").split(" "))
+                lst = line.strip("\n").split(" ")
+                block[lst[0]] = int(lst[1])
             if line.startswith('L'):
                 lst = line.strip("\n").split(" ")
-                lazer[(int(lst[1]),int(lst[2]))] = [int(lst[3]),int(lst[4])]
+                lazor[(int(lst[1]),int(lst[2]))] = [int(lst[3]),int(lst[4])]
             if line.startswith('P'):
                 lst = line.strip("\n").split(" ")
                 point.append((int(lst[1]),int(lst[2])))
         # Add to the dictionary.
         file["block"] = block
-        file["lazer"] = lazer
+        file["lazor"] = lazor
         file["target_point"] = point
         # Close the file
         f.close()
@@ -244,5 +249,4 @@ if __name__ == "__main__":
     a = Lazor()
     b = a.load_lazor_map(info_dict)
     c = a.lazor_path(b)
-    d = a.read_bff('mad_1.bff')
-    print(d)
+    print(b)
