@@ -1,6 +1,8 @@
 '''
-finish read_bff
+Don: finished loading map and loading lazor path
+working on solving
 '''
+from itertools import permutations
 
 
 class Lazor():
@@ -10,6 +12,7 @@ class Lazor():
     def __init__(self):
         '''
         '''
+
 
     def read_bff(self,filename):
         '''
@@ -44,7 +47,7 @@ class Lazor():
             # Generate a list of lists with information of the map(the line between "GRID START" and "GRID STOP" )
             lst = []
             for x in line.strip("\n"):
-                if x != " " :
+                if x != " ":
                     lst.append(x)
             map.append(lst)
         # Add map to dictionary.
@@ -65,7 +68,7 @@ class Lazor():
                 point.append((int(lst[1]),int(lst[2])))
         # Add to the dictionary.
         file["block"] = block
-        file["lazor"] = lazor
+        file["original_lazor"] = lazor
         file["target_point"] = point
         # Close the file
         f.close()
@@ -123,7 +126,13 @@ class Lazor():
                         )
                     else:
                         info_dict["fixed_block_position"]\
-                            [(2 * x + 1, 2 * y + 1)] = [raw_info[y][x]]
+                            [(2 * x + 1, 2 * y + 1)] = raw_info[y][x]
+        for f in info_dict['fixed_block_position']:
+            info_dict['block_position'][f] =\
+                info_dict['fixed_block_position'][f]
+        for target_point in info_dict['target_point']:
+            if target_point not in info_dict['map_points']:
+                info_dict['map_points'].append(target_point)
         return info_dict
 
     def reflect_block_location(
@@ -155,6 +164,7 @@ class Lazor():
         info_dict['lazor_path'] = {}
         info_dict['possible_block_position'] = {}
         c_lazor = {}
+        info_dict['lazor'].update(info_dict["original_lazor"])
         for i in info_dict['lazor']:
             if i not in info_dict['lazor_path']:
                 info_dict['lazor_path'][i] = []
@@ -202,11 +212,40 @@ class Lazor():
                 info_dict['lazor'][c] = c_lazor[c]
             return Lazor.load_lazor_map(self, info_dict)
 
-    def solve_lazor(self):
+    def solve_lazor(self, info_dict):
         '''
-        注意：有些地图中的目标点在地图之外！
         '''
-        pass
+        info_dict['block_position'] = {}
+        moveable_blocks = []
+        for i in info_dict['block']:
+            moveable_blocks += [i] * info_dict['block'][i]
+        arranged_moveable_blocks = list(
+            set(permutations(moveable_blocks, len(moveable_blocks))))
+        print(arranged_moveable_blocks)
+        print(info_dict)
+        for arrange in arranged_moveable_blocks:
+            block_numbers = len(arrange) - 1
+            info_dict['temporary'] = {}
+            while block_numbers >= 0:
+                Lazor.lazor_path(self, info_dict)
+                info_dict["temporary"][block_numbers] = []
+                print(info_dict["temporary"])
+                for i in info_dict['possible_block_position']:
+                    for k in info_dict['possible_block_position'][i]:
+                        info_dict["temporary"][block_numbers].append(k)
+                if info_dict["temporary"][block_numbers] != []:
+                    print(info_dict["temporary"][block_numbers])
+                    new_block = info_dict["temporary"][block_numbers].pop()
+                    print(info_dict["temporary"][block_numbers])
+                    print(new_block)
+                    info_dict['block_position'][new_block] = arrange[block_numbers]
+                    print(info_dict['block_position'])
+                    block_numbers -= 1
+                elif block_numbers < len(arrange) - 1:
+                    block_numbers += 1
+                else:
+                    break
+            print(info_dict['temporary'])
 
     def save_txt(self):
         '''
@@ -234,10 +273,11 @@ if __name__ == "__main__":
             ['o', 'o', 'o', 'o'],
             ['o', 'o', 'o', 'x']
         ],
-        'lazor': {
+        'lazor': {},
+        'original_lazor': {
             (8, 7): [-1, -1],
-            (7, 4): [1, -1]
         },
+        "target_point": [(2, 3), (3, 4), (4, 5), (5, 6), (6, 7)],
         'block_position': {
             (5, 3): "A",
             (1, 5): "A",
@@ -247,6 +287,35 @@ if __name__ == "__main__":
         }
     }
     a = Lazor()
-    b = a.load_lazor_map(info_dict)
-    c = a.lazor_path(b)
-    print(b)
+    b = a.read_bff('tiny_5.bff')
+    print(b['original_lazor'])
+    g = a.load_lazor_map(info_dict)
+    g = a.lazor_path(g)
+    print(g)
+    # c = a.load_lazor_map(b)
+    # d = a.lazor_path(c)
+    b['block_position'] = {}
+    f = a.load_lazor_map(b)
+    # print(f)
+    possible_block_position = list(set(permutations(f['blank_position'], 4)))
+    for i in possible_block_position:
+        f['lazor'] = {}
+        f['block_position'] = {}
+        f['block_position'][i[0]] = "A"
+        f['block_position'][i[1]] = "A"
+        f['block_position'][i[2]] = "A"
+        f['block_position'][i[3]] = "C"
+        f['block_position'][(3, 1)] = "B"
+        f = a.lazor_path(f)
+        path = []
+        for lpath in f['lazor_path']:
+            for s in f['lazor_path'][lpath]:
+                path.append(s)
+        if (1, 2) in path and (6, 3) in path:
+            break
+    print(path)
+    print(f)
+    '''
+    g = a.lazor_path(f)
+    h = a.solve_lazor(g)
+    '''
