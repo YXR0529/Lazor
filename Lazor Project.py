@@ -13,20 +13,22 @@ class Lazor():
         '''
         '''
 
-
-    def read_bff(self,filename):
+    def read_bff(self, filename):
         '''
-        This function is used to read a .bff file and generate a corresponding dictionary.(Written by Xinru)
+        This function is used to read a .bff file
+        and generate a corresponding dictionary.(Written by Xinru)
         The generated dictionary contains 4 parts.
 
         *** map ***
         A list of lists which shows the look of the map.
 
         *** block ***
-        A list gives us the information about numbers of different types of blocks.
+        A list gives us the information about numbers of
+        different types of blocks.
 
-        *** lazer ***
-        A dictionary gives us the information including numbers of lazers, starting positon and the direction of lazers.
+        *** lazor ***
+        A dictionary gives us the information including numbers of lasers,
+        starting positon and the direction of lasers.
         {(starting position):[direction]}
 
         *** target_point ***
@@ -44,7 +46,8 @@ class Lazor():
             # Skip the line after "GRID STOP"
             if line.strip("\n") == "GRID STOP":
                 break
-            # Generate a list of lists with information of the map(the line between "GRID START" and "GRID STOP" )
+            # Generate a list of lists with information of the map.
+            # (the line between "GRID START" and "GRID STOP" )
             lst = []
             for x in line.strip("\n"):
                 if x != " ":
@@ -56,16 +59,20 @@ class Lazor():
         lazor = {}
         point = []
         for line in f:
-            # Generate list/dictionary with information of blocks/lazors/target points.
-            if line.startswith('A') or line.startswith('B') or line.startswith('C'):
+            '''
+            Generate list/dictionary with information of
+            blocks/lasers/target points.
+            '''
+            if line.startswith('A') or line.startswith('B')\
+                    or line.startswith('C'):
                 lst = line.strip("\n").split(" ")
                 block[lst[0]] = int(lst[1])
             if line.startswith('L'):
                 lst = line.strip("\n").split(" ")
-                lazor[(int(lst[1]),int(lst[2]))] = [int(lst[3]),int(lst[4])]
+                lazor[(int(lst[1]), int(lst[2]))] = [int(lst[3]), int(lst[4])]
             if line.startswith('P'):
                 lst = line.strip("\n").split(" ")
-                point.append((int(lst[1]),int(lst[2])))
+                point.append((int(lst[1]), int(lst[2])))
         # Add to the dictionary.
         file["block"] = block
         file["original_lazor"] = lazor
@@ -292,10 +299,26 @@ class Lazor():
                 i -= 1
         return info_dict
 
-    def save_txt(self):
+    def save_txt(self, info_dict, filename):
         '''
+        This function is used to generate a .txt file.
+        The content of the file is based on the dictionary
+        generated from the solve_lazor function.
+        (Written by  Xinru)
         '''
-        pass
+
+        f = open(filename, 'w')
+        map = info_dict['map']
+        block_position = info_dict['block_position']
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if (2 * x + 1, 2 * y + 1) in block_position:
+                    f.write(block_position[(2 * x + 1, 2 * y + 1)] + ' ')
+                else:
+                    f.write(map[y][x] + ' ')
+            f.write('\n')
+        f.close()
+        return f
 
     def save_image(self):
         '''
@@ -356,6 +379,7 @@ if __name__ == "__main__":
     b = a.read_bff('tiny_5.bff')
     # print(b['original_lazor'])
     b = a.load_lazor_map(b)
+    # print(b)
     b = a.lazor_path(b)
     g = a.load_lazor_map(info_dict)
     # print(g)
@@ -370,6 +394,7 @@ if __name__ == "__main__":
     # print(len(possible_block_position))
     # k = a.solve_lazor(b)
     # print(k)
+    # a.save_txt(k, 'yarn_5.txt')
     g = a.solve_lazor(g)
     print(g)
     '''
