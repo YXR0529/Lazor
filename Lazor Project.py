@@ -13,20 +13,22 @@ class Lazor():
         '''
         '''
 
-
-    def read_bff(self,filename):
+    def read_bff(self, filename):
         '''
-        This function is used to read a .bff file and generate a corresponding dictionary.(Written by Xinru)
+        This function is used to read a .bff file
+        and generate a corresponding dictionary.(Written by Xinru)
         The generated dictionary contains 4 parts.
 
         *** map ***
         A list of lists which shows the look of the map.
 
         *** block ***
-        A list gives us the information about numbers of different types of blocks.
+        A list gives us the information about numbers of
+        different types of blocks.
 
         *** lazer ***
-        A dictionary gives us the information including numbers of lazers, starting positon and the direction of lazers.
+        A dictionary gives us the information including numbers of lazers,
+        starting positon and the direction of lazers.
         {(starting position):[direction]}
 
         *** target_point ***
@@ -44,7 +46,8 @@ class Lazor():
             # Skip the line after "GRID STOP"
             if line.strip("\n") == "GRID STOP":
                 break
-            # Generate a list of lists with information of the map(the line between "GRID START" and "GRID STOP" )
+            # Generate a list of lists with information of the map.
+            # (the line between "GRID START" and "GRID STOP" )
             lst = []
             for x in line.strip("\n"):
                 if x != " ":
@@ -56,16 +59,20 @@ class Lazor():
         lazor = {}
         point = []
         for line in f:
-            # Generate list/dictionary with information of blocks/lazors/target points.
-            if line.startswith('A') or line.startswith('B') or line.startswith('C'):
+            '''
+            Generate list/dictionary with information of
+            blocks/lazors/target points.
+            '''
+            if line.startswith('A') or line.startswith('B')\
+                    or line.startswith('C'):
                 lst = line.strip("\n").split(" ")
                 block[lst[0]] = int(lst[1])
             if line.startswith('L'):
                 lst = line.strip("\n").split(" ")
-                lazor[(int(lst[1]),int(lst[2]))] = [int(lst[3]),int(lst[4])]
+                lazor[(int(lst[1]), int(lst[2]))] = [int(lst[3]), int(lst[4])]
             if line.startswith('P'):
                 lst = line.strip("\n").split(" ")
-                point.append((int(lst[1]),int(lst[2])))
+                point.append((int(lst[1]), int(lst[2])))
         # Add to the dictionary.
         file["block"] = block
         file["original_lazor"] = lazor
