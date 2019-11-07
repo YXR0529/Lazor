@@ -26,9 +26,9 @@ class Lazor():
         A list gives us the information about numbers of
         different types of blocks.
 
-        *** lazer ***
-        A dictionary gives us the information including numbers of lazers,
-        starting positon and the direction of lazers.
+        *** lazor ***
+        A dictionary gives us the information including numbers of lasers,
+        starting positon and the direction of lasers.
         {(starting position):[direction]}
 
         *** target_point ***
@@ -61,7 +61,7 @@ class Lazor():
         for line in f:
             '''
             Generate list/dictionary with information of
-            blocks/lazors/target points.
+            blocks/lasers/target points.
             '''
             if line.startswith('A') or line.startswith('B')\
                     or line.startswith('C'):
@@ -284,10 +284,26 @@ class Lazor():
                 i -= 1
         return info_dict
 
-    def save_txt(self):
+    def save_txt(self, info_dict, filename):
         '''
+        This function is used to generate a .txt file.
+        The content of the file is based on the dictionary
+        generated from the solve_lazor function.
+        (Written by  Xinru)
         '''
-        pass
+
+        f = open(filename, 'w')
+        map = info_dict['map']
+        block_position = info_dict['block_position']
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if (2 * x + 1, 2 * y + 1) in block_position:
+                    f.write(block_position[(2 * x + 1, 2 * y + 1)] + ' ')
+                else:
+                    f.write(map[y][x] + ' ')
+            f.write('\n')
+        f.close()
+        return f
 
     def save_image(self):
         '''
@@ -326,7 +342,7 @@ if __name__ == "__main__":
     b = a.read_bff('yarn_5.bff')
     # print(b['original_lazor'])
     b = a.load_lazor_map(b)
-    print(b)
+    # print(b)
     b = a.lazor_path(b)
     g = a.load_lazor_map(info_dict)
     # print(g)
@@ -341,6 +357,7 @@ if __name__ == "__main__":
     # print(len(possible_block_position))
     k = a.solve_lazor(b)
     print(k)
+    a.save_txt(k, 'yarn_5.txt')
     # g = a.solve_lazor(g)
     # print(g)
     '''
