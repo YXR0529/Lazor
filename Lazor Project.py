@@ -278,10 +278,26 @@ class Lazor():
                 i += 1
         return info_dict
 
-    def save_txt(self):
+    def save_txt(self, info_dict, filename):
         '''
+        This function is used to generate a .txt file.
+        The content of the file is based on the dictionary
+        generated from the solve_lazor function.
+        (Written by  Xinru)
         '''
-        pass
+
+        f = open(filename, 'w')
+        map = info_dict['map']
+        block_position = info_dict['block_position']
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if (2 * x + 1, 2 * y + 1) in block_position:
+                    f.write(block_position[(2 * x + 1, 2 * y + 1)] + ' ')
+                else:
+                    f.write(map[y][x] + ' ')
+            f.write('\n')
+        f.close()
+        return f
 
     def set_color(self, img, x0, y0, dim, gap, color):
         '''
@@ -402,7 +418,7 @@ if __name__ == "__main__":
         }
     }
     a = Lazor()
-    b = a.read_bff('yarn_6.bff')
+    b = a.read_bff('tricky_6.bff')
     # print(b['original_lazor'])
     b = a.load_lazor_map(b)
     b = a.lazor_path(b)
