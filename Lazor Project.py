@@ -5,6 +5,7 @@ working on solving
 from itertools import permutations
 import sys
 import threading
+from PIL import Image, ImageDraw
 
 
 class Lazor():
@@ -298,15 +299,94 @@ class Lazor():
         ]
         return judge
 
-    def save_txt(self):
+    def save_txt(self, info_dict, filename):
         '''
+        This function is used to generate a .txt file.
+        The content of the file is based on the dictionary
+        generated from the solve_lazor function.
+        (Written by  Xinru)
         '''
-        pass
 
-    def save_image(self):
+        f = open(filename, 'w')
+        map = info_dict['map']
+        block_position = info_dict['block_position']
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if (2 * x + 1, 2 * y + 1) in block_position:
+                    f.write(block_position[(2 * x + 1, 2 * y + 1)] + ' ')
+                else:
+                    f.write(map[y][x] + ' ')
+            f.write('\n')
+        f.close()
+        return f
+
+    def set_color(self, img, x0, y0, dim, gap, color):
+        '''
+        \\
+        '''
+
+        for x in range(dim):
+            for y in range(dim):
+                img.putpixel(
+                    (gap + (gap + dim) * x0 + x, gap + (gap + dim) * y0 + y),
+                    color
+                )
+
+    def set_tp(self, info_dict, dim, gap):
         '''
         '''
-        pass
+        target_point = info_dict['target_point']
+        tp = []
+        for (x, y) in target_point:
+            x = (gap + (gap + dim) * x) / 2
+            y = (gap + (gap + dim) * y) / 2
+            tp.append((x,y))
+        return tp
+
+    def set_lp(self, info_dict, dim, gap):
+        '''
+        '''
+        lazor_path = info_dict['lazor_path']
+
+
+    def save_img(self, info_dict, filename, blockSize=50, gapSize=5):
+        '''
+        '''
+        COLORS = {
+            'A': (255, 255, 255),  # white
+            'B': (0, 0, 0),  # black
+            'C': (245, 245, 245),  # transparent
+            'o': (192, 192, 192),
+            'x': (128, 128, 128),
+            'lazor': (255, 0, 0),
+            'target_point': (255, 0, 0)
+        }
+
+        map = info_dict['map']
+        block_position = info_dict['block_position']
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if (2 * x + 1, 2 * y + 1) in block_position:
+                    map[y][x] = block_position[(2 * x + 1, 2 * y + 1)]
+
+        w_blocks = len(map[0])
+        h_blocks = len(map)
+        SIZE = (w_blocks * (blockSize + gapSize) + gapSize,
+                h_blocks * (blockSize + gapSize) + gapSize)
+        img = Image.new("RGB", SIZE, color=COLORS['x'])
+
+        for y, row in enumerate(map):
+            for x, block_ID in enumerate(row):
+                Lazor.set_color(self, img,
+                                x, y, blockSize, gapSize, COLORS[block_ID])
+
+        lazor = info_dict['lazor_path']
+
+        draw = ImageDraw.Draw(img)
+        target_point = Lazor.set_tp(self, info_dict, blockSize, gapSize)
+        for (x, y) in target_point:
+            draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=COLORS['target_point'])
+        img.save(filename)
 
     def General(self):
         '''
@@ -376,6 +456,8 @@ if __name__ == "__main__":
     # print(len(possible_block_position))
     k = a.solve_lazor(b)
     print(k)
+    a.save_txt(k, 'tricky_6.txt')
+    a.save_img(k, 'tricky_6.png')
     # g = a.solve_lazor(g)
     # print(g)
     '''
