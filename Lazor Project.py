@@ -5,7 +5,6 @@ working on solving
 from itertools import permutations
 import sys
 import threading
-from PIL import Image, ImageDraw
 
 
 class Lazor():
@@ -276,7 +275,13 @@ class Lazor():
                     judge = Lazor.run_possible_comb(self, info_dict, p, comb)
                     print(judge)
                     if judge == []:
-                        return info_dict
+                        rb = Lazor.redundant_blocks(self, info_dict)
+                        if rb is False:
+                            pass
+                        else:
+                            info_dict['block_position'].update(rb)
+                            info_dict = Lazor.lazor_path(self, info_dict)
+                            return info_dict
                 i += 1
             arranged_moveable_blocks.remove(comb)
             print(arranged_moveable_blocks)
@@ -299,94 +304,65 @@ class Lazor():
         ]
         return judge
 
-    def save_txt(self, info_dict, filename):
-        '''
-        This function is used to generate a .txt file.
-        The content of the file is based on the dictionary
-        generated from the solve_lazor function.
-        (Written by  Xinru)
-        '''
-
-        f = open(filename, 'w')
-        map = info_dict['map']
-        block_position = info_dict['block_position']
-        for y in range(len(map)):
-            for x in range(len(map[0])):
-                if (2 * x + 1, 2 * y + 1) in block_position:
-                    f.write(block_position[(2 * x + 1, 2 * y + 1)] + ' ')
+    def redundant_blocks(self, info_dict):
+        print(info_dict)
+        moveable_blocks = []
+        able_positions = []
+        for bp in info_dict['blank_position']:
+            able_positions.append(bp)
+        for block in info_dict['block']:
+            moveable_blocks += [block] * info_dict['block'][block]
+        for fixed_block in info_dict['block_position']:
+            if fixed_block not in info_dict['fixed_block_position']:
+                moveable_blocks.remove(
+                    info_dict['block_position'][fixed_block])
+                able_positions.remove(fixed_block)
+        if moveable_blocks == []:
+            return {}
+        else:
+            unable_positions = []
+            for lazor in info_dict['lazor_path']:
+                test = info_dict['lazor_path'][lazor].pop()
+                while test not in info_dict['target_point']:
+                    test = info_dict['lazor_path'][lazor].pop()
+                if info_dict['lazor_path'][lazor] == []:
+                    pass
                 else:
-                    f.write(map[y][x] + ' ')
-            f.write('\n')
-        f.close()
-        return f
+                    x = lazor[0]
+                    y = lazor[1]
+                    direction_x = info_dict['lazor'][lazor][0]
+                    direction_y = info_dict['lazor'][lazor][1]
+                    while (x, y) in info_dict['lazor_path'][lazor]:
+                        (key, value), = Lazor.reflect_block_location(
+                            self, x, y, direction_x, direction_y
+                        ).items()
+                        if key not in info_dict['block_position']:
+                            unable_positions.append(key)
+                        else:
+                            direction_x, direction_y = value
+                        x += direction_x
+                        y += direction_y
+            print(unable_positions)
+            unable_positions = Lazor.delete_duplicated_element(self, unable_positions)
+            for up in unable_positions:
+                able_positions.remove(up)
+            if len(able_positions) < len(moveable_blocks):
+                return False
+            else:
+                return zip(able_positions, moveable_blocks)
 
-    def set_color(self, img, x0, y0, dim, gap, color):
-        '''
-        \\
-        '''
+    def delete_duplicated_element(self, listA):
+        return sorted(set(listA), key = listA.index)
 
-        for x in range(dim):
-            for y in range(dim):
-                img.putpixel(
-                    (gap + (gap + dim) * x0 + x, gap + (gap + dim) * y0 + y),
-                    color
-                )
-
-    def set_tp(self, info_dict, dim, gap):
-        '''
-        '''
-        target_point = info_dict['target_point']
-        tp = []
-        for (x, y) in target_point:
-            x = (gap + (gap + dim) * x) / 2
-            y = (gap + (gap + dim) * y) / 2
-            tp.append((x,y))
-        return tp
-
-    def set_lp(self, info_dict, dim, gap):
+    def save_txt(self):
         '''
         '''
-        lazor_path = info_dict['lazor_path']
+        pass
 
-
-    def save_img(self, info_dict, filename, blockSize=50, gapSize=5):
+    def save_image(self):
         '''
         '''
-        COLORS = {
-            'A': (255, 255, 255),  # white
-            'B': (0, 0, 0),  # black
-            'C': (245, 245, 245),  # transparent
-            'o': (192, 192, 192),
-            'x': (128, 128, 128),
-            'lazor': (255, 0, 0),
-            'target_point': (255, 0, 0)
-        }
-
-        map = info_dict['map']
-        block_position = info_dict['block_position']
-        for y in range(len(map)):
-            for x in range(len(map[0])):
-                if (2 * x + 1, 2 * y + 1) in block_position:
-                    map[y][x] = block_position[(2 * x + 1, 2 * y + 1)]
-
-        w_blocks = len(map[0])
-        h_blocks = len(map)
-        SIZE = (w_blocks * (blockSize + gapSize) + gapSize,
-                h_blocks * (blockSize + gapSize) + gapSize)
-        img = Image.new("RGB", SIZE, color=COLORS['x'])
-
-        for y, row in enumerate(map):
-            for x, block_ID in enumerate(row):
-                Lazor.set_color(self, img,
-                                x, y, blockSize, gapSize, COLORS[block_ID])
-
-        lazor = info_dict['lazor_path']
-
-        draw = ImageDraw.Draw(img)
-        target_point = Lazor.set_tp(self, info_dict, blockSize, gapSize)
-        for (x, y) in target_point:
-            draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=COLORS['target_point'])
-        img.save(filename)
+        pass
 
     def General(self):
         '''
@@ -439,7 +415,7 @@ if __name__ == "__main__":
         }
     }
     a = Lazor()
-    b = a.read_bff('yarn_7.bff')
+    b = a.read_bff('numbered_6.bff')
     # print(b['original_lazor'])
     b = a.load_lazor_map(b)
     b = a.lazor_path(b)
@@ -456,8 +432,6 @@ if __name__ == "__main__":
     # print(len(possible_block_position))
     k = a.solve_lazor(b)
     print(k)
-    a.save_txt(k, 'tricky_6.txt')
-    a.save_img(k, 'tricky_6.png')
     # g = a.solve_lazor(g)
     # print(g)
     '''
