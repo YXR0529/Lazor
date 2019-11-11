@@ -2,9 +2,7 @@
 Don: finished loading map and loading lazor path
 working on solving
 '''
-from itertools import permutations
-import sys
-import threading
+from itertools import permutations, combinations
 from PIL import Image, ImageDraw
 
 
@@ -200,6 +198,8 @@ class Lazor():
                     if info_dict["block_position"][key] == "A":
                         direction_x, direction_y = value
                     elif info_dict["block_position"][key] == "B":
+                        if (x, y) in info_dict["map_points"]:
+                            info_dict['lazor_path'][i].append((x, y))
                         break
                     elif info_dict["block_position"][key] == "C":
                         if (x + direction_x, y + direction_y) not in\
@@ -263,6 +263,7 @@ class Lazor():
                 moveable_blocks += [i] * info_dict['block'][i]
         arranged_moveable_blocks = list(
             set(permutations(moveable_blocks, len(moveable_blocks))))
+        # print(arranged_moveable_blocks)
         while arranged_moveable_blocks != []:
             comb = arranged_moveable_blocks[0]
             print(comb)
@@ -274,7 +275,7 @@ class Lazor():
                 info_dict['fixed_block_position'])
             info_dict = Lazor.lazor_path(self, info_dict)
             possible_list = [[x] for x in info_dict['possible_block_position']]
-            print(possible_list)
+            # print(possible_list)
             while i + 1 < len(comb):
                 possible_list = Lazor.all_possible_situations(
                     self, info_dict, possible_list, comb)
@@ -283,10 +284,58 @@ class Lazor():
                     judge = Lazor.run_possible_comb(self, info_dict, p, comb)
                     print(judge)
                     if judge == []:
-                        return info_dict
+                        rb = Lazor.redundant_blocks(self, info_dict)
+                        if rb is False:
+                            pass
+                        else:
+                            info_dict['block_position'].update(rb)
+                            info_dict = Lazor.lazor_path(self, info_dict)
+                            path = []
+                            for p in info_dict['lazor_path']:
+                                path += info_dict['lazor_path'][p]
+                            judge = [
+                                False for c in info_dict['target_point']
+                                if c not in path
+                            ]
+                            if judge == []:
+                                return info_dict
+                            else:
+                                pass
                 i += 1
             arranged_moveable_blocks.remove(comb)
-            print(arranged_moveable_blocks)
+        moveable_blocks = []
+        able_positions = []
+        violent_combinations = []
+        for bp in info_dict['blank_position']:
+            able_positions.append(bp)
+        # print(able_positions)
+        for block in info_dict['block']:
+            moveable_blocks += [block] * info_dict['block'][block]
+            if violent_combinations == []:
+                violent_combinations += list(set(combinations(able_positions, info_dict['block'][block])))
+                # print(violent_combinations)
+            else:
+                new_list = []
+                for vc in violent_combinations:
+                    # print(vc)
+                    append = list(combinations(able_positions, info_dict['block'][block]))
+                    for ap in append:
+                        new_list.append(vc + ap)
+                violent_combinations = new_list
+        # print(violent_combinations)
+        listed_violent_combinations = []
+        for c in violent_combinations:
+            test = list(c)
+            test = Lazor.delete_duplicated_element(self, test)
+            if len(test) == len(moveable_blocks):
+                listed_violent_combinations.append(test)
+        # print(listed_violent_combinations)
+        # print(len(violent_combinations))
+        # print(len(listed_violent_combinations))
+        for remain in listed_violent_combinations:
+            judge = Lazor.run_possible_comb(self, info_dict, remain, moveable_blocks)
+            if judge == []:
+                return info_dict
 
     def run_possible_comb(self, info_dict, p, comb):
         info_dict['lazor_path'] = {}
@@ -305,6 +354,59 @@ class Lazor():
             if c not in path
         ]
         return judge
+
+    def redundant_blocks(self, info_dict):
+        # print(info_dict)
+        moveable_blocks = []
+        able_positions = []
+        for bp in info_dict['blank_position']:
+            able_positions.append(bp)
+        for block in info_dict['block']:
+            moveable_blocks += [block] * info_dict['block'][block]
+        for fixed_block in info_dict['block_position']:
+            if fixed_block not in info_dict['fixed_block_position']:
+                moveable_blocks.remove(
+                    info_dict['block_position'][fixed_block])
+                able_positions.remove(fixed_block)
+        if moveable_blocks == []:
+            return {}
+        else:
+            unable_positions = []
+            for lazor in info_dict['lazor_path']:
+                test = info_dict['lazor_path'][lazor].pop()
+                while test not in info_dict['target_point']:
+                    test = info_dict['lazor_path'][lazor].pop()
+                if info_dict['lazor_path'][lazor] == []:
+                    pass
+                else:
+                    x = lazor[0]
+                    y = lazor[1]
+                    direction_x = info_dict['lazor'][lazor][0]
+                    direction_y = info_dict['lazor'][lazor][1]
+                    while (x, y) in info_dict['lazor_path'][lazor]:
+                        (key, value), = Lazor.reflect_block_location(
+                            self, x, y, direction_x, direction_y
+                        ).items()
+                        if key not in info_dict['block_position'] and\
+                                key in info_dict['blank_position']:
+                            unable_positions.append(key)
+                        else:
+                            direction_x, direction_y = value
+                        x += direction_x
+                        y += direction_y
+            # print(unable_positions)
+            unable_positions = Lazor.delete_duplicated_element(self, unable_positions)
+            # print(able_positions)
+            # print(unable_positions)
+            for up in unable_positions:
+                able_positions.remove(up)
+            if len(able_positions) < len(moveable_blocks):
+                return False
+            else:
+                return zip(able_positions, moveable_blocks)
+
+    def delete_duplicated_element(self, listA):
+        return sorted(set(listA), key=listA.index)
 
     def save_txt(self, info_dict, filename):
         '''
@@ -329,7 +431,8 @@ class Lazor():
 
     def set_color(self, img, x0, y0, dim, gap, color):
         '''
-        \\
+        This function is used to change the color of a certain area.
+        (written by Xinru)
         '''
 
         for x in range(dim):
@@ -341,17 +444,21 @@ class Lazor():
 
     def set_tp(self, info_dict, dim, gap):
         '''
+        This function is to generate a list of pixel values of target points.
+        (written by Xinru)
         '''
         target_point = info_dict['target_point']
         tp = []
         for (x, y) in target_point:
             x = (gap + (gap + dim) * x) / 2
             y = (gap + (gap + dim) * y) / 2
-            tp.append((x,y))
+            tp.append((x, y))
         return tp
 
     def set_lp(self, info_dict, dim, gap):
         '''
+        This function is to generate a list of pixel values of laser path.
+        (written by Xinru)
         '''
         lazor_path = info_dict['lazor_path']
         lp = {}
@@ -368,15 +475,18 @@ class Lazor():
 
     def save_img(self, info_dict, filename, blockSize=50, gapSize=5):
         '''
+        This function is used to generate a .png file to show clearly
+        the answer to the game.
         '''
         COLORS = {
-            'A': (255, 255, 255),  # white
-            'B': (0, 0, 0),  # black
-            'C': (245, 245, 245),  # transparent
+            'A': (255, 255, 255),
+            'B': (0, 0, 0),
+            'C': (245, 245, 245),
             'o': (192, 192, 192),
             'x': (128, 128, 128),
         }
 
+        # Generate a new list of the pixel values of map.
         map = info_dict['map']
         block_position = info_dict['block_position']
         for y in range(len(map)):
@@ -384,6 +494,7 @@ class Lazor():
                 if (2 * x + 1, 2 * y + 1) in block_position:
                     map[y][x] = block_position[(2 * x + 1, 2 * y + 1)]
 
+        # Create a new image.
         w_blocks = len(map[0])
         h_blocks = len(map)
         SIZE = (w_blocks * (blockSize + gapSize) + gapSize,
@@ -395,21 +506,30 @@ class Lazor():
                 Lazor.set_color(self, img,
                                 x, y, blockSize, gapSize, COLORS[block_ID])
 
+        # Draw lines to show the path of the laser.
         draw = ImageDraw.Draw(img)
-
         lazor = info_dict['lazor']
-        for (x,y) in lazor:
-            if type(lazor[(x, y)]) == list:
+        original_lazor = info_dict['original_lazor']
+        lazor_path = Lazor.set_lp(self, info_dict, blockSize, gapSize)
+        for (x, y) in lazor:
+            if (x, y) in original_lazor:
                 x = (gapSize + (gapSize + blockSize) * x) / 2
                 y = (gapSize + (gapSize + blockSize) * y) / 2
                 draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill=(255, 0, 0))
+                lst = lazor_path[(x, y)]
+                draw.line(lst, width=5, fill=(255, 0, 0))
 
-        lazor_path = Lazor.set_lp(self, info_dict, blockSize, gapSize)
-        for i in lazor_path:
-            lst = lazor_path[i]
-            print(lst)
-            draw.line(lst, width=5, fill=(255, 0, 0))
+        for (x, y) in lazor:
+            if (x, y) not in info_dict['original_lazor']:
+                x = (gapSize + (gapSize + blockSize) * x) / 2
+                y = (gapSize + (gapSize + blockSize) * y) / 2
+                lst = lazor_path[(x, y)]
+                direction_x = lst[1][0] - lst[0][0]
+                direction_y = lst[1][1] - lst[0][1]
+                lst.insert(0, (x - direction_x, y - direction_y))
+                draw.line(lst, width=5, fill=(255, 0, 0))
 
+        # Draw points to show the position of target points.
         target_point = Lazor.set_tp(self, info_dict, blockSize, gapSize)
         for (x, y) in target_point:
             draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=(255, 0, 0))
@@ -467,7 +587,7 @@ if __name__ == "__main__":
         }
     }
     a = Lazor()
-    b = a.read_bff('mad_7.bff')
+    b = a.read_bff('Grande_10.bff')
     # print(b['original_lazor'])
     b = a.load_lazor_map(b)
     b = a.lazor_path(b)
@@ -483,9 +603,7 @@ if __name__ == "__main__":
     # possible_block_position = list(combinations(g['blank_position'], 6))
     # print(len(possible_block_position))
     k = a.solve_lazor(b)
-    print(k)
-    a.save_txt(k, 'mad_7.txt')
-    a.save_img(k, 'mad_7.png')
+    a.save_img(k, 'Grande_10.png')
     # g = a.solve_lazor(g)
     # print(g)
     '''
