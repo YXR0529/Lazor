@@ -3,6 +3,7 @@ Don: finished loading map and loading lazor path
 working on solving
 '''
 from itertools import permutations, combinations
+from PIL import Image, ImageDraw
 
 class Lazor():
     '''
@@ -399,15 +400,133 @@ class Lazor():
     def delete_duplicated_element(self, listA):
         return sorted(set(listA), key=listA.index)
 
-    def save_txt(self):
+    def save_txt(self, info_dict, filename):
         '''
+        This function is used to generate a .txt file.
+        The content of the file is based on the dictionary
+        generated from the solve_lazor function.
+        (Written by  Xinru)
         '''
-        pass
 
-    def save_image(self):
+        f = open(filename, 'w')
+        map = info_dict['map']
+        block_position = info_dict['block_position']
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if (2 * x + 1, 2 * y + 1) in block_position:
+                    f.write(block_position[(2 * x + 1, 2 * y + 1)] + ' ')
+                else:
+                    f.write(map[y][x] + ' ')
+            f.write('\n')
+        f.close()
+        return f
+
+    def set_color(self, img, x0, y0, dim, gap, color):
         '''
+        This function is used to change the color of a certain area.
+        (written by Xinru)
         '''
-        pass
+
+        for x in range(dim):
+            for y in range(dim):
+                img.putpixel(
+                    (gap + (gap + dim) * x0 + x, gap + (gap + dim) * y0 + y),
+                    color
+                )
+
+    def set_tp(self, info_dict, dim, gap):
+        '''
+        This function is to generate a list of pixel values of target points.
+        (written by Xinru)
+        '''
+        target_point = info_dict['target_point']
+        tp = []
+        for (x, y) in target_point:
+            x = (gap + (gap + dim) * x) / 2
+            y = (gap + (gap + dim) * y) / 2
+            tp.append((x, y))
+        return tp
+      
+    def set_lp(self, info_dict, dim, gap):
+        '''
+        This function is to generate a list of pixel values of laser path.
+        (written by Xinru)
+        '''
+        lazor_path = info_dict['lazor_path']
+        lp = {}
+        for (x0, y0) in lazor_path:
+            x1 = (gap + (gap + dim) * x0) / 2
+            y1 = (gap + (gap + dim) * y0) / 2
+            lst = []
+            for (x, y) in lazor_path[(x0, y0)]:
+                x = (gap + (gap + dim) * x) / 2
+                y = (gap + (gap + dim) * y) / 2
+                lst.append((x, y))
+            lp[(x1, y1)] = lst
+        return lp
+
+    def save_img(self, info_dict, filename, blockSize=50, gapSize=5):
+        '''
+        This function is used to generate a .png file to show clearly
+        the answer to the game.
+        '''
+        COLORS = {
+            'A': (255, 255, 255),
+            'B': (0, 0, 0),
+            'C': (245, 245, 245),
+            'o': (192, 192, 192),
+            'x': (128, 128, 128),
+        }
+
+        # Generate a new list of the pixel values of map.
+        map = info_dict['map']
+        block_position = info_dict['block_position']
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if (2 * x + 1, 2 * y + 1) in block_position:
+                    map[y][x] = block_position[(2 * x + 1, 2 * y + 1)]
+
+        # Create a new image.
+        w_blocks = len(map[0])
+        h_blocks = len(map)
+        SIZE = (w_blocks * (blockSize + gapSize) + gapSize,
+                h_blocks * (blockSize + gapSize) + gapSize)
+        img = Image.new("RGB", SIZE, color=COLORS['x'])
+
+        for y, row in enumerate(map):
+            for x, block_ID in enumerate(row):
+                Lazor.set_color(self, img,
+                                x, y, blockSize, gapSize, COLORS[block_ID])
+
+        # Draw lines to show the path of the laser.
+        draw = ImageDraw.Draw(img)
+        lazor = info_dict['lazor']
+        original_lazor = info_dict['original_lazor']
+        lazor_path = Lazor.set_lp(self, info_dict, blockSize, gapSize)
+        for (x, y) in lazor:
+            if (x, y) in original_lazor:
+                x = (gapSize + (gapSize + blockSize) * x) / 2
+                y = (gapSize + (gapSize + blockSize) * y) / 2
+                draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill=(255, 0, 0))
+                lst = lazor_path[(x, y)]
+                draw.line(lst, width=5, fill=(255, 0, 0))
+
+        for (x, y) in lazor:
+            if (x, y) not in info_dict['original_lazor']:
+                x = (gapSize + (gapSize + blockSize) * x) / 2
+                y = (gapSize + (gapSize + blockSize) * y) / 2
+                lst = lazor_path[(x, y)]
+                direction_x = lst[1][0] - lst[0][0]
+                direction_y = lst[1][1] - lst[0][1]
+                lst.insert(0, (x - direction_x, y - direction_y))
+                draw.line(lst, width=5, fill=(255, 0, 0))
+
+        # Draw points to show the position of target points.
+        target_point = Lazor.set_tp(self, info_dict, blockSize, gapSize)
+        for (x, y) in target_point:
+            draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=(255, 0, 0))
+            draw.ellipse((x - 2, y - 2, x + 2, y + 2), fill=(255, 255, 255))
+        img.save(filename)
 
     def General(self):
         '''
@@ -460,7 +579,7 @@ if __name__ == "__main__":
         }
     }
     a = Lazor()
-    b = a.read_bff('crossed_6.bff')
+    b = a.read_bff('Grande_10.bff')
     # print(b['original_lazor'])
     b = a.load_lazor_map(b)
     b = a.lazor_path(b)
@@ -476,7 +595,7 @@ if __name__ == "__main__":
     # possible_block_position = list(combinations(g['blank_position'], 6))
     # print(len(possible_block_position))
     k = a.solve_lazor(b)
-    print(k)
+    a.save_img(k, 'Grande_10.png')
     # g = a.solve_lazor(g)
     # print(g)
     '''
