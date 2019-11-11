@@ -1,0 +1,11 @@
+GRID START
+o o x
+o o o
+A x o
+GRID STOP
+
+A 2
+
+L 3 6 -1 -1
+
+P 0 3
