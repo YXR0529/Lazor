@@ -5,7 +5,6 @@ working on solving
 from itertools import permutations
 import sys
 import threading
-from PIL import Image, ImageDraw
 
 
 class Lazor():
@@ -283,7 +282,13 @@ class Lazor():
                     judge = Lazor.run_possible_comb(self, info_dict, p, comb)
                     print(judge)
                     if judge == []:
-                        return info_dict
+                        rb = Lazor.redundant_blocks(self, info_dict)
+                        if rb is False:
+                            pass
+                        else:
+                            info_dict['block_position'].update(rb)
+                            info_dict = Lazor.lazor_path(self, info_dict)
+                            return info_dict
                 i += 1
             arranged_moveable_blocks.remove(comb)
             print(arranged_moveable_blocks)
@@ -306,6 +311,56 @@ class Lazor():
         ]
         return judge
 
+    def redundant_blocks(self, info_dict):
+        print(info_dict)
+        moveable_blocks = []
+        able_positions = []
+        for bp in info_dict['blank_position']:
+            able_positions.append(bp)
+        for block in info_dict['block']:
+            moveable_blocks += [block] * info_dict['block'][block]
+        for fixed_block in info_dict['block_position']:
+            if fixed_block not in info_dict['fixed_block_position']:
+                moveable_blocks.remove(
+                    info_dict['block_position'][fixed_block])
+                able_positions.remove(fixed_block)
+        if moveable_blocks == []:
+            return {}
+        else:
+            unable_positions = []
+            for lazor in info_dict['lazor_path']:
+                test = info_dict['lazor_path'][lazor].pop()
+                while test not in info_dict['target_point']:
+                    test = info_dict['lazor_path'][lazor].pop()
+                if info_dict['lazor_path'][lazor] == []:
+                    pass
+                else:
+                    x = lazor[0]
+                    y = lazor[1]
+                    direction_x = info_dict['lazor'][lazor][0]
+                    direction_y = info_dict['lazor'][lazor][1]
+                    while (x, y) in info_dict['lazor_path'][lazor]:
+                        (key, value), = Lazor.reflect_block_location(
+                            self, x, y, direction_x, direction_y
+                        ).items()
+                        if key not in info_dict['block_position']:
+                            unable_positions.append(key)
+                        else:
+                            direction_x, direction_y = value
+                        x += direction_x
+                        y += direction_y
+            print(unable_positions)
+            unable_positions = Lazor.delete_duplicated_element(self, unable_positions)
+            for up in unable_positions:
+                able_positions.remove(up)
+            if len(able_positions) < len(moveable_blocks):
+                return False
+            else:
+                return zip(able_positions, moveable_blocks)
+
+    def delete_duplicated_element(self, listA):
+        return sorted(set(listA), key = listA.index)
+      
     def save_txt(self, info_dict, filename):
         '''
         This function is used to generate a .txt file.
@@ -366,7 +421,7 @@ class Lazor():
             lp[(x1, y1)] = lst
         return lp
 
-    def save_img(self, info_dict, filename, blockSize=50, gapSize=5):
+    def save_image(self):
         '''
         '''
         COLORS = {
