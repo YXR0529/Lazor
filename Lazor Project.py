@@ -1,6 +1,87 @@
 '''
-Don: finished loading map and loading lazor path
-working on solving
+Project: Lazor
+Authors: Xinru Yun, Tianjun Tang(Don)
+
+Course: Software Carpentry
+Johns Hopkins University
+
+
+
+Welcome to our Lazor Project!
+This is our midterm group project of Software Carpentry,
+that requires us to solve a charming game named Lazor.
+(which can be downloaded from AppStore)
+
+
+
+To play with, this code requires .bff files, most of which
+can be found from our repository, that look like following:
+
+(numbered_10.bff)
+*** Map ***
+.bff files start with original map.
+Nomenclature follows these rules:
+    x = no block allowed
+    o = blocks allowed
+    A = fixed reflect block
+    B = fixed opaque block
+    C = fixed refract block
+
+# Grid will start at top left being 0, 0
+# Step size is by half blocks
+# Thus, this leads to even numbers indicating
+# the rows/columns between blocks, and odd numbers
+# intersecting blocks.
+
+[For Example]
+GRID START
+o o o
+o x o
+o o o
+x x o
+o o o
+GRID STOP
+
+*** Movable Blocks ***
+Informations of which and how many block that's movable.
+(Type Amount)
+Types:
+    A = fixed reflect block
+    B = fixed opaque block
+    C = fixed refract block
+
+[For Example]
+A 5
+B 3
+C 1
+
+*** Lazor ***
+# Now we specify that we have two lazers
+#    x, y, vx, vy
+# NOTE! because 0, 0 is the top left, our axis
+# are as follows:
+#
+#      __________  +x
+#      |         /
+#      |
+#      |
+#      |
+#      |/ +y
+
+Information of each lazor is stored as:
+L x y x-direction y-direction
+
+[For Example]
+(L 5 2 -1 -1)
+
+*** Target Points ***
+
+# Here we have the points that we need the lazers to intersect
+(P x y)
+[For Example]
+P 4 3
+P 6 5
+P 6 7
 '''
 from itertools import permutations, combinations
 from PIL import Image, ImageDraw
@@ -8,16 +89,135 @@ from PIL import Image, ImageDraw
 
 class Lazor():
     '''
+    *** PROTOCOL ***
+    In this code, all informations are generated and changed
+    inside the "info_dict", which is a dictionary that stores
+    all informations we need.
+
+    All functions must be run in given order, to make sure proper
+    initializations, as follows:
+        Lazor = Lazor()
+        info_dict = Lazor.read_bff('dark_10.bff')
+        info_dict = Lazor.load_lazor_map(info_dict)
+        info_dict = Lazor.lazor_path(info_dict)
+        info_dict = Lazor.solve_lazor(info_dict)
+        Lazor.save_img(info_dict) or Lazor.save_txt(info_dict)
+
+    As you may notice, besides read_bff(), all functions only requires
+    one input, "info_dict", which make it easy to run and debug.
+
+    *** FUNCTIONS ***
+        ** read_bff **
+        ** load_lazor_map **
+            Author: Don
+
+            This function reads raw info from the info_dict,
+            and generate more infos like map_points, fixed_block_position,
+            map_length/height and original_lazor, as well as making many
+            initializations, basically empty lists and dictionaries,
+            for following functions.
+
+        ** reflect_block_location **
+            Author: Don
+
+            This function is a sub_function of solve_lazor() and
+            redundant_blocks().
+
+            It solves that, if the lazor path is to be blocked or
+            reflected at the inputed point, where should the block be putted.
+            And if it's reflected, how would new direction change.
+
+        ** lazor_path **
+            Author: Don
+
+            This function reads the 'block_position' info, with others, to
+            generate path for each lazor, stored as a dictionary holding a
+            list of position tuples, labeled by each lazor's starting point.
+
+            It also generates a 'possible_block_position' list indicating
+            positions that you may put next block.
+            (Notice: It's meaningless to put the block outside lazor path, at
+            least in most cases.)
+
+        ** all_possible_situations **
+            Author: Don
+
+            This is a sub_function for solve_lazor(). (Method 1)
+            Input:
+                possible_list:  a list of possible position combinations for
+                                first few blocks
+                block_list:     a list of block order, for example putting A
+                                after C and putting C after A will generate
+                                different lazor paths
+            Output:
+                A new possible list of possible position combinations after
+                putting next block on block_list.
+
+        ** solve_lazor **
+            Author: Don
+
+            This is function that applies three methods to solve the problem.
+            Each method is for a different situation.
+                Situation 1:Situations when you've used all blocks. In this
+                            case all blocks must be putted on lazor paths.
+                Situation 2:Situations when there are some block remaining
+                            when all target points are hit. Remaing blocks
+                            mustn't block lazor paths.
+                Situation 3:Situations like dark series, in which you have to
+                            block some lazor paths.
+                            Also when some bugs occur in former situations,
+                            it's always the last chance to solve the problem.
+
+                Method 1:   Generate a "possible_list" that only contains
+                            combinations that all blocks are on lazor path,
+                            using all_possible_situations() function.
+                Method 2:   Remove points on each lazor path after last target
+                            point. Then use same method of 'possible_block_
+                            position', but in this case, they are 'impossible_
+                            block_position'.
+                            If the blank positions are enough for remaining
+                            blocks, after subtracting 'impossible_blocks' and
+                            those already put on the map, then it's the answer.
+                Method 3:   Use combinations to 'violently' solve the problem.
+
+        ** run_possible_comb **
+            Author: Don
+
+            This function is a sub_function for solve_lazor().
+
+            It initialize the info_dict and check if the combinations
+            are correct, that is, when all target points are hit.
+
+            It return a list of False, showing how many target points
+            are not hit.
+
+        ** redundant_blocks **
+            Author: Don
+
+            This functions is a sub_function for solve_lazor().
+            
+            It handles method 2, and return a dictionary of remaining
+            blocks' positions, or return False when there aren't enough
+            places.
+
+        ** delete_duplicated_element **
+            Author: Don
+
+            This little function deletes duplicated elements in a list.
+
+            Quite useful in many places, lol.
+
+        ** save_txt **
+        ** set_color **
+        ** set_tp **
+        ** set_lp **
+        ** save_img **
     '''
 
-    def __init__(self):
+    def read_bff(self, filename):
         '''
-        '''
-
-
-    def read_bff(self,filename):
-        '''
-        This function is used to read a .bff file and generate a corresponding dictionary.(Written by Xinru)
+        This function is used to read a .bff file and
+        generate a corresponding dictionary.(Written by Xinru)
         The generated dictionary contains 4 parts.
 
         *** map ***
@@ -223,7 +423,7 @@ class Lazor():
                 times += 1
                 if times > 100:
                     break
-        # recheck start block
+        # recheck lazor starting point
         # make sure it's not blocked at both sides (issues found in Numbered_7)
         for rsb in info_dict['original_lazor']:
             position_x, position_y = rsb
@@ -286,10 +486,8 @@ class Lazor():
                 moveable_blocks += [i] * info_dict['block'][i]
         arranged_moveable_blocks = list(
             set(permutations(moveable_blocks, len(moveable_blocks))))
-        # print(arranged_moveable_blocks)
         while arranged_moveable_blocks != []:
             comb = arranged_moveable_blocks[0]
-            # print(comb)
             i = 0
             info_dict['lazor_path'] = {}
             info_dict['lazor'] = {}
@@ -298,11 +496,9 @@ class Lazor():
                 info_dict['fixed_block_position'])
             info_dict = Lazor.lazor_path(self, info_dict)
             possible_list = [[x] for x in info_dict['possible_block_position']]
-            # print(possible_list)
             while i + 1 < len(comb):
                 possible_list = Lazor.all_possible_situations(
                     self, info_dict, possible_list, comb)
-                # print(possible_list)
                 for p in possible_list:
                     judge = Lazor.run_possible_comb(self, info_dict, p, comb)
                     if judge == []:
@@ -330,18 +526,15 @@ class Lazor():
         violent_combinations = []
         for bp in info_dict['blank_position']:
             able_positions.append(bp)
-        # print(able_positions)
         for block in info_dict['block']:
             moveable_blocks += [block] * info_dict['block'][block]
             if violent_combinations == []:
                 violent_combinations += list(
                     set(combinations(
                         able_positions, info_dict['block'][block])))
-                # print(violent_combinations)
             else:
                 new_list = []
                 for vc in violent_combinations:
-                    # print(vc)
                     append = list(
                         combinations(
                             able_positions, info_dict['block'][block]))
